@@ -966,10 +966,47 @@ if __name__ == "__main__":
 <head>
     <title>Ollama Library API Proxy</title>
     <style>
-        body { font-family: sans-serif; line-height: 1.6; margin: 20px; }
-        h1, h2 { color: #333; }
-        code { background-color: #eee; padding: 2px 4px; border-radius: 4px; }
-        li { margin-bottom: 5px; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 40px auto;
+            max-width: 800px;
+            padding: 0 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        h1 {
+            color: #222;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        h2 {
+            color: #444;
+            margin-top: 30px;
+            font-size: 1.4em;
+        }
+        p {
+            margin-bottom: 12px;
+        }
+        a {
+            color: #007acc;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        code {
+            background-color: #eef;
+            padding: 4px 6px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
@@ -995,6 +1032,9 @@ if __name__ == "__main__":
     </ul>
 
     <p>The API caches responses from ollama.com for 6 hours by default.</p>
+    <p><a href="https://nextuiapp.pages.dev">NextUI</a></p>
+    <p>API developed by <a href="https://discord.com/users/575254127748317194">Blood Shot</a></p>
+    <p>API hosted by <a href="https://discord.com/users/947432701160480828">Houloude9</a></p>
 </body>
 </html>
 """
