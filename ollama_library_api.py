@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional, Dict, Any, Union
-from fastapi import FastAPI, HTTPException, Query, Path as FastApiPath
-from fastapi.responses import FileResponse, HTMLResponse # Import FileResponse and HTMLResponse
+from fastapi import FastAPI, HTTPException, Request, Query, Path as FastApiPath
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse # Import FileResponse and HTMLResponse
 from pydantic import BaseModel, Field, HttpUrl
 import requests
 import requests_cache
@@ -11,15 +11,40 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
 import re
 import os
+import random
+import time
+from collections import deque
 
 # --- Configuration ---
+
+CODE_VERSION = '1.3.0_Release'
 OLLAMA_COM_BASE_URL = "https://ollama.com"
+CURRENT_BASE_URL = "https://ollamasearchapi.onrender.com"
+STATIC_WEBSITE = False # RECOMMENDED "FALSE"
+CACHE_EXPIRE_AFTER = 6 # HOURS
+
+# --- Configuration ---
+
+
 # Cache settings: SQLite backend, expires after 6 hours (21600 seconds)
 # Use a simple in-memory cache for demonstration/testing, persistent 'sqlite' is also an option
-requests_cache.install_cache('ollama_com_cache', backend='memory', expire_after=21600)
+cachetime = CACHE_EXPIRE_AFTER * 3600
+requests_cache.install_cache('ollama_com_cache', backend='memory', expire_after=cachetime)
 # Use a CachedSession for all requests to ollama.com
 cached_session = requests_cache.CachedSession()
 
+
+# --- DO NOT CHANGE WITHOUT KNOWLEDGE ---
+
+Static_Website = STATIC_WEBSITE
+filename = 'index.html'
+format = 'html'
+TEMPTEXT = f'{int(time.time() * 1000)}{format}'
+FILETEMPTEXT = f'tempfile_{TEMPTEXT}.html'
+
+if Static_Website == True:
+    TEMPTEXT = f'index'
+    FILETEMPTEXT = f'index.html'
 # --- Pydantic Models ---
 
 class CacheInfoMixin(BaseModel):
@@ -137,7 +162,7 @@ class BlobDetailsResponse(CacheInfoMixin):
 app = FastAPI(
     title="Ollama.com Library API Proxy",
     description="An API that fetches, parses, and caches data from ollama.com.",
-    version="1.2.1", # Version increment
+    version=CODE_VERSION, # Version increment
 )
 
 # --- Helper Functions ---
@@ -659,10 +684,43 @@ def parse_gguf_metadata_from_snippet(snippet: str) -> Optional[GGUFMetadata]:
 
 # --- API Endpoints (Reordered for FastAPI matching) ---
 
+
+
+app = FastAPI()
+
+# Store the last N ping durations (in seconds)
+ping_durations = deque(maxlen=100)
+
+# Store the total bytes sent (simulated bandwidth usage)
+total_bytes_sent = 0
+
+@app.get("/ping")
+async def ping(request: Request):
+    global total_bytes_sent
+
+    # Simulated pong response
+    response_data = {"message": "pong"}
+    response = JSONResponse(content=response_data)
+
+    # Approximate response size in bytes
+    response_body = response.body
+    response_size = len(response_body)
+    total_bytes_sent += response_size
+
+    metrics = {
+        "status": "pong",
+        "total_pings": len(ping_durations),
+        "total_bandwidth_sent_kb": round(total_bytes_sent / 1024, 2),
+        "last_response_size_bytes": response_size
+    }
+
+    return JSONResponse(content=metrics)
+
+
 @app.get("/", include_in_schema=False)
 async def read_index():
     script_dir = os.path.dirname(__file__)
-    html_file_path = os.path.join(script_dir, "static", "index.html")
+    html_file_path = os.path.join(script_dir, "static", FILETEMPTEXT)
     if not os.path.exists(html_file_path):
         return HTMLResponse(content="<h1>Ollama Library API</h1><p>index.html not found. See <a href='/docs'>API Documentation</a>.</p>", status_code=404)
     return FileResponse(path=html_file_path, media_type="text/html")
@@ -950,6 +1008,12 @@ async def list_models_by_namespace(
         **cache_info
     )
 
+
+if not format.startswith('.'):
+    format = f'.{format}'
+
+if Static_Website == False:
+    filename = f'{FILETEMPTEXT}'
 # --- Main execution ---
 if __name__ == "__main__":
     print("Starting Ollama Library API (Live Fetch) server...")
@@ -958,88 +1022,674 @@ if __name__ == "__main__":
         os.makedirs(static_dir)
         print(f"Created static directory: {static_dir}")
 
-    index_html_path = os.path.join(static_dir, "index.html")
+    index_html_path = os.path.join(static_dir, filename)
     if not os.path.exists(index_html_path):
         dummy_html_content = """
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Ollama Library API Proxy</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama API Proxy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-third: #111927;
+            --accent-primary: #38bdf8;
+            --accent-secondary: #7dd3fc;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --gradient: linear-gradient(135deg, #38bdf8 0%, #7dd3fc 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
             line-height: 1.6;
-            margin: 40px auto;
-            max-width: 800px;
-            padding: 0 20px;
-            background-color: #f9f9f9;
-            color: #333;
         }
-        h1 {
-            color: #222;
-            font-size: 2em;
-            margin-bottom: 10px;
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
         }
-        h2 {
-            color: #444;
-            margin-top: 30px;
-            font-size: 1.4em;
+
+        .header {
+            text-align: center;
+            padding: 4rem 0;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            margin-bottom: 3rem;
+            transition: 0.7s ease-in-out;
         }
-        p {
-            margin-bottom: 12px;
+
+        .title {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
         }
-        a {
-            color: #007acc;
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .nav-link {
+            color: var(--accent-primary);
             text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: 0.6s ease-in-out;
         }
-        a:hover {
-            text-decoration: underline;
+
+        .nav-link:hover {
+            color: var(--accent-secondary);
+            transition: 0.3s ease-in-out;
+            background: rgba(56, 189, 248, 0.1);
         }
-        code {
-            background-color: #eef;
-            padding: 4px 6px;
-            border-radius: 5px;
-            font-family: monospace;
+
+        .section {
+            margin-bottom: 3rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        ul {
-            padding-left: 20px;
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        li {
-            margin-bottom: 8px;
+
+        .endpoint-grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         }
+
+        .endpoint-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: transform 0.2s ease;
+        }
+
+        .endpoint-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .endpoint-title {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .endpoint-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .code-snippet {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            position: relative;
+            margin: 1rem 0;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--bg-secondary);
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .copy-button:hover {
+            color: var(--accent-primary);
+            background: var(--bg-primary);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .social-link {
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+
+        .social-link:hover {
+            color: var(--accent-primary);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .endpoint-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent-primary);
+            margin-left: 0.5rem;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+            .apps-grid {
+        display: grid;
+        gap: 2rem;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+
+    .app-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .app-card:hover {
+        border-color: var(--accent-primary);
+    }
+
+    .app-icon {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+        margin: 0 auto 1rem;
+        border-radius: 16px;
+        filter: grayscale(1);
+        transition: filter 0.3s ease;
+    }
+
+    .app-card:hover .app-icon {
+        filter: grayscale(0);
+    }
+
+    .app-name {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .app-description {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .app-version {
+        font-size: 0.75rem;
+        color: var(--accent-primary);
+        background: rgba(56, 189, 248, 0.1);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        display: inline-block;
+    }
+
+            .apps-grid {
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: repeat(4, 1fr);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 1200px) {
+            .apps-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .apps-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .apps-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .submit-form {
+            background: var(--bg-primary);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 6px;
+            margin-top: 0.5rem;
+        }
+
+        .submit-button {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            width: 100%;
+        }
+
+        .submit-button:hover {
+            opacity: 0.9;
+        }
+
+        .status-message {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .success {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid var(--accent-primary);
+        }
+
+        .error {
+            background: rgba(248, 56, 56, 0.1);
+            border: 1px solid #f87171;
+        }
+
+            .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.95);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal-content {
+        background: var(--bg-secondary);
+        padding: 2rem;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        position: relative;
+    }
+
+    .close-modal {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+
+    .close-modal:hover {
+        color: var(--accent-primary);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
     </style>
 </head>
 <body>
-    <h1>Ollama Library API Proxy</h1>
-    <p>This is a simple proxy API that fetches, parses, and caches data from <a href="https://ollama.com" target="_blank">ollama.com</a>.</p>
-    <p>Access the API documentation (Swagger UI) at <a href="/docs">/docs</a>.</p>
-    <p>Access the alternative documentation (ReDoc) at <a href="/redoc">/redoc</a>.</p>
+    <header class="header animate-fade-in">
+        <div class="container">
+            <h1 class="title">Ollama API Proxy</h1>
+            <p class="subtitle">An API that fetches, parses, and caches data from ollama.com.</p>
+            <nav class="nav-links">
+                <a href="/docs" class="nav-link"><i class="fas fa-code"></i> API Docs</a>
+                <a href="/redoc" class="nav-link"><i class="fas fa-book-open"></i> ReDoc</a>
+                <a href="https://ollama.com" target="_blank" class="nav-link"><i class="fas fa-external-link-alt"></i> Ollama.com</a>
+            </nav>
+        </div>
+    </header>
 
-    <h2>Example Endpoints:</h2>
-    <ul>
-        <li>List popular models in 'library' namespace: <code><a href="/library?o=popular">/library?o=popular</a></code></li>
-        <li>List newest models in 'library' namespace: <code><a href="/library?o=newest">/library?o=newest</a></code></li>
-        <li>List popular models for user 'jmorganca': <code><a href="/jmorganca?o=popular">/jmorganca?o=popular</a></code></li>
-        <li>List 'library' models filtered by 'vision' capability: <code><a href="/library?c=vision">/library?c=vision</a></code></li>
-        <li>Search for 'mistral': <code><a href="/search?q=mistral">/search?q=mistral</a></code></li>
-        <li>Get details for 'llama3' (from library): <code><a href="/library/llama3">/library/llama3</a></code></li>
-        <li>Get details for 'codellama' by 'jmorganca': <code><a href="/jmorganca/codellama">/jmorganca/codellama</a></code></li>
-        <li>Get details for specific tag 'llama3:8b': <code><a href="/library/llama3:8b">/library/llama3:8b</a></code></li>
-        <li>List all tags for 'llama3' (from library): <code><a href="/library/llama3/tags">/library/llama3/tags</a></code></li>
-        <li>Get info for 'model' blob of 'llama3:8b': <code><a href="/library/llama3:8b/blobs/model">/library/llama3:8b/blobs/model</a></code></li>
-        <li>Get info for 'params' blob of 'llama3:8b': <code><a href="/library/llama3:8b/blobs/params">/library/llama3:8b/blobs/params</a></code></li>
-        <li>Get info for blob by digest (e.g., part of a model digest): <code><a href="/library/llama3:8b/blobs/a3de86cd1c13">/library/llama3:8b/blobs/a3de86cd1c13</a></code></li>
-    </ul>
+    <main class="container">
+        <section class="section animate-fade-in">
+            <h2 class="section-title"><i class="fas fa-rocket"></i> Getting Started</h2>
+            <div class="code-snippet">
+                <button class="copy-button" onclick="navigator.clipboard.writeText('http://localhost:5115/docs')">
+                    <i class="far fa-copy"></i>
+                </button>
+                # Explore the API documentation
+                $ open http://localhost:5115/docs
+            </div>
+        </section>
 
-    <p>The API caches responses from ollama.com for 6 hours by default.</p>
-    <p><a href="https://nextuiapp.pages.dev">NextUI</a></p>
-    <p>API developed by <a href="https://discord.com/users/575254127748317194">Blood Shot</a></p>
-    <p>API hosted by <a href="https://discord.com/users/947432701160480828">Houloude9</a></p>
+        <section class="section animate-fade-in">
+            <h2 class="section-title"><i class="fas fa-plug"></i> Example Endpoints</h2>
+            <div class="endpoint-grid">
+                <div class="endpoint-card">
+                    <div class="endpoint-title">GET /library?o=popular <span class="badge">Default</span></div>
+                    <p class="endpoint-description">Get popular models from official library</p>
+                </div>
+                
+                <div class="endpoint-card">
+                    <div class="endpoint-title">GET /jmorganca/llama3 <span class="badge">User Model</span></div>
+                    <p class="endpoint-description">Get details for specific user model</p>
+                </div>
+
+                <div class="endpoint-card">
+                    <div class="endpoint-title">GET /search?q=mistral <span class="badge">Search</span></div>
+                    <p class="endpoint-description">Global model search functionality</p>
+                </div>
+
+                <div class="endpoint-card">
+                    <div class="endpoint-title">GET /.../blobs/model <span class="badge">Blobs</span></div>
+                    <p class="endpoint-description">Access raw model artifacts</p>
+                </div>
+            </div>
+        </section>
+        
+
+        <section class="section animate-fade-in">
+            <h2 class="section-title"><i class="fas fa-microchip"></i> System Status</h2>
+            <div class="endpoint-grid">
+                <div class="endpoint-card">
+                    <div class="endpoint-title">Cache Status <span class="badge">Live</span></div>
+                    <p class="endpoint-description">6-hour intelligent caching</p>
+                </div>
+                <div class="endpoint-card">
+                    <div class="endpoint-title">Uptime <span class="badge">99.9%</span></div>
+                    <p class="endpoint-description">High availability service</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section animate-fade-in">
+            <h2 class="section-title"><i class="fas fa-rocket"></i> Powered Apps</h2>
+            <div class="apps-grid" id="apps-container"></div>
+            <button class="submit-button" id="openModal" style="margin-top: 1.5rem;">
+                <i class="fas fa-plus"></i> Submit Your App
+            </button>
+        </section>
+    </main>
+
+<div id="submitModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3 class="section-title"><i class="fas fa-plus-circle"></i> Submit Your App</h3>
+        <form id="appSubmitForm" onsubmit="return submitApp(event)">
+            <div class="form-group">
+                <label>App Name</label>
+                <input type="text" class="form-input" id="appName" required>
+            </div>
+            <div class="form-group">
+                <label>Website URL</label>
+                <input type="url" class="form-input" id="websiteUrl" required>
+            </div>
+            <button type="submit" class="submit-button">Submit Application</button>
+        </form>
+        <div id="statusMessage" class="status-message"></div>
+    </div>
+</div>
+
+    <footer class="footer animate-fade-in">
+        <div class="container">
+            <div class="social-links" style="margin-bottom: 20px;">
+                <a href="https://github.com/Houloude9IOfficial/OllamaSearchAPI" class="social-link" target="_blank">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="https://houloude9.is-a.dev" class="social-link" target="_blank">
+                    <i class="fa fa-globe"></i>
+                </a>
+            </div>
+            <span id="version" class="badge"></span>
+            <p>
+              Developed by 
+              <a href="https://discord.com/users/575254127748317194" target="_blank" rel="noopener noreferrer"
+                 style="text-decoration: none; font-weight: bold; color: inherit;"
+                 onmouseover="this.style.textDecoration='underline'" 
+                 onmouseout="this.style.textDecoration='none'">
+                Blood Shot
+              </a>
+            </p>
+            <p>
+              Maintained by 
+              <a href="https://discord.com/users/947432701160480828" target="_blank" rel="noopener noreferrer"
+                 style="text-decoration: none; font-weight: bold; color: inherit;"
+                 onmouseover="this.style.textDecoration='underline'" 
+                 onmouseout="this.style.textDecoration='none'">
+                Houloude9
+              </a>
+            </p>
+            <p>
+              Powered by 
+              <a href="https://render.com" target="_blank" rel="noopener noreferrer"
+                 style="text-decoration: none; font-weight: bold; color: inherit;"
+                 onmouseover="this.style.textDecoration='underline'" 
+                 onmouseout="this.style.textDecoration='none'">
+                Render.com
+              </a>
+            </p>
+
+        </div>
+    </footer>
+
+    <script>
+        function setversion(version) {
+            if(!String(String(version).toLowerCase()).startsWith('v')) {
+                version = `v${version}`
+            }
+            document.getElementById('version').textContent = version
+        }
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        document.querySelectorAll('.copy-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const snippet = this.parentElement.textContent.replace('Copy', '').trim();
+                navigator.clipboard.writeText(snippet);
+                
+                const originalHTML = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                
+                setTimeout(() => {
+                    this.innerHTML = originalHTML;
+                }, 2000);
+            });
+        });
+            const modal = document.getElementById('submitModal');
+    const openBtn = document.getElementById('openModal');
+    const closeSpan = document.querySelector('.close-modal');
+
+    openBtn.onclick = () => modal.style.display = 'flex';
+    closeSpan.onclick = () => modal.style.display = 'none';
+
+    window.onclick = (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    }
+        
+        async function submitApp(event) {
+            event.preventDefault();
+            const name = document.getElementById('appName').value;
+            const website = document.getElementById('websiteUrl').value;
+            const statusMessage = document.getElementById('statusMessage');
+
+            try {
+                new URL(website);
+            } catch {
+                statusMessage.textContent = "Please enter a valid URL";
+                statusMessage.className = "status-message error";
+                statusMessage.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('https://nextuiserver.htdevs.workers.dev/ollamasearchapi/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, website }),
+                });
+
+                const data = await response.json();
+                
+        if (response.ok) {
+            statusMessage.textContent = "App submitted successfully!";
+            statusMessage.className = "status-message success";
+            document.getElementById('appSubmitForm').reset();
+            setTimeout(() => {
+                modal.style.display = 'none';
+                statusMessage.style.display = 'none';
+            }, 2000);
+        } else {
+                    statusMessage.textContent = data.error || "Submission failed";
+                    statusMessage.className = "status-message error";
+                }
+            } catch (error) {
+                statusMessage.textContent = "Network error - please try again";
+                statusMessage.className = "status-message error";
+            }
+            
+            statusMessage.style.display = 'block';
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        async function loadPoweredApps() {
+            try {
+                const response = await fetch('https://nextuiserver.htdevs.workers.dev/ollamasearchapi/getapps');
+                const data = await response.json();
+                const container = document.getElementById('apps-container');
+                
+                container.innerHTML = '';
+                
+                data.apps.forEach(app => {
+                    const card = document.createElement('div');
+                    card.className = 'app-card';
+                    card.onclick = () => window.open(app.url, '_blank');
+                    const fullversion = app.version ? `<div class="app-version">${app.version}</div>` : '';
+                    
+                    card.innerHTML = `
+                        <img src="${app.icon}" class="app-icon" alt="${app.name}">
+                        <div class="app-name">${app.name}</div>
+                        <div class="app-description">${app.description}</div>
+                        ${fullversion}
+                    `;
+                    
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error loading powered apps:', error);
+            }
+        }
+
+    window.addEventListener('DOMContentLoaded', loadPoweredApps);
+
+        setversion('VERSION_BEING_REPLACED')
+    </script>
 </body>
 </html>
 """
+    # Replace placeholder before writing to file
+        modified_html_content = dummy_html_content.replace("VERSION_BEING_REPLACED", CODE_VERSION)
+        
+        # Write the modified content
         with open(index_html_path, "w") as f:
-            f.write(dummy_html_content)
+            f.write(modified_html_content)
+        
         print(f"Created dummy index.html at: {index_html_path}")
 
     print("OpenAPI docs available at http://localhost:5115/docs")
