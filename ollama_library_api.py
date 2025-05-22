@@ -1011,6 +1011,8 @@ async def list_models_by_namespace(
 
 if not format.startswith('.'):
     format = f'.{format}'
+if not Static_Website and os.path.exists('static/index.html'):
+    os.remove('static/index.html')
 
 if Static_Website == False:
     filename = f'{FILETEMPTEXT}'
