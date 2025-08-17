@@ -3,8 +3,8 @@
 A **simple proxy API** that fetches, parses, and **caches** data from [ollama.com](https://ollama.com/).  
 
 🔧 **Documentation**  
-- [Swagger UI (/docs)](dear-franky-htdevssss-83f0aa7d.koyeb.app/docs)  
-- [ReDoc UI (/redoc)](dear-franky-htdevssss-83f0aa7d.koyeb.app/redoc)  
+- [Swagger UI (/docs)](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/docs)  
+- [ReDoc UI (/redoc)](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/redoc)  
 
 🕒 **Note:** All responses are cached for **6 hours** by default.  
 
@@ -44,7 +44,7 @@ CODE_VERSION=1.3.0_Release
 OLLAMA_COM_BASE_URL=https://ollama.com
 
 # Your API URL
-CURRENT_BASE_URL=dear-franky-htdevssss-83f0aa7d.koyeb.app
+CURRENT_BASE_URL=https://example.com
 
 # If running a static website
 STATIC_WEBSITE=False
@@ -57,41 +57,41 @@ CACHE_EXPIRE_AFTER=6
 
 ### 📊 Library Namespace
 - 🔥 Popular models:  
-  [`/library?o=popular`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library?o=popular)
+  [`/library?o=popular`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/library?o=popular)
 - 🆕 Newest models:  
-  [`/library?o=newest`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library?o=newest)
+  [`/library?o=newest`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/library?o=newest)
 - 👁️ Filter by vision capability:  
-  [`/library?c=vision`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library?c=vision)
+  [`/library?c=vision`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/library?c=vision)
 
 ---
 
 ### 👤 User-Specific Queries
 - 🔥 Popular models by `jmorganca`:  
-  [`/jmorganca?o=popular`](dear-franky-htdevssss-83f0aa7d.koyeb.app/jmorganca?o=popular)
+  [`/jmorganca?o=popular`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/jmorganca?o=popular)
 - 📄 Get details for `nextai` by `htdevs`:  
-  [`/htdevs/nextai`](dear-franky-htdevssss-83f0aa7d.koyeb.app/htdevs/nextai)
+  [`/htdevs/nextai`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/htdevs/nextai)
 
 ---
 
 ### 🔎 Search & Model Info
 - 🔍 Search for `mistral`:  
-  [`/search?q=mistral`](dear-franky-htdevssss-83f0aa7d.koyeb.app/search?q=mistral)
+  [`/search?q=mistral`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/search?q=mistral)
 - 📘 Details for `llama3`:  
-  [`/library/llama3`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3)
+  [`/library/llama3`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3)
 - 🏷️ Tag details for `llama3:8b`:  
-  [`/library/llama3:8b`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b)
+  [`/library/llama3:8b`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b)
 - 🏷️ All tags for `llama3`:  
-  [`/library/llama3/tags`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3/tags)
+  [`/library/llama3/tags`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3/tags)
 
 ---
 
 ### 🧱 Blobs & Digests
 - 📦 Get `model` blob for `llama3:8b`:  
-  [`/library/llama3:8b/blobs/model`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b/blobs/model)
+  [`/library/llama3:8b/blobs/model`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b/blobs/model)
 - ⚙️ Get `params` blob for `llama3:8b`:  
-  [`/library/llama3:8b/blobs/params`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b/blobs/params)
+  [`/library/llama3:8b/blobs/params`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b/blobs/params)
 - 🧬 Get blob by digest:  
-  [`/library/llama3:8b/blobs/a3de86cd1c13`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b/blobs/a3de86cd1c13)
+  [`/library/llama3:8b/blobs/a3de86cd1c13`](https://dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b/blobs/a3de86cd1c13)
 
 ---
 
