@@ -559,11 +559,11 @@ dummy_html_content = """
             </p>
             <p>
               Powered by 
-              <a href="https://render.com" target="_blank" rel="noopener noreferrer"
+              <a href="https://koyeb.com" target="_blank" rel="noopener noreferrer"
                  style="text-decoration: none; font-weight: bold; color: inherit;"
                  onmouseover="this.style.textDecoration='underline'" 
                  onmouseout="this.style.textDecoration='none'">
-                Render.com
+                Koyeb
               </a>
             </p>
 
