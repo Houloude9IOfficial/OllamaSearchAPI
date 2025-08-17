@@ -99,6 +99,6 @@ CACHE_EXPIRE_AFTER=6
 
  - Programmed by [Blood Shot](https://discord.com/users/575254127748317194)   
  - Maintained by [Houloude9](https://discord.com/users/947432701160480828)   
- -   Hosted by [Render](https://render.com)
+ -   Hosted by [Koyeb](https://koyeb.com)
 
 > 💡 **Tip:** Use these endpoints to build your own Ollama-powered dashboards, tools, or integrations effortlessly.
