@@ -14,14 +14,17 @@ import os
 import random
 import time
 from collections import deque
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # --- Configuration ---
 
-CODE_VERSION = '1.3.0_Release'
-OLLAMA_COM_BASE_URL = "https://ollama.com"
-CURRENT_BASE_URL = "https://ollamasearchapi.onrender.com"
-STATIC_WEBSITE = False # RECOMMENDED "FALSE"
-CACHE_EXPIRE_AFTER = 6 # HOURS
+CODE_VERSION = os.getenv("CODE_VERSION", "Unknown_Release")
+OLLAMA_COM_BASE_URL = os.getenv("OLLAMA_COM_BASE_URL", "https://ollama.com")
+CURRENT_BASE_URL = os.getenv("CURRENT_BASE_URL", "https://example.com")
+STATIC_WEBSITE = os.getenv("STATIC_WEBSITE", "False") == "True" # RECOMMENDED "FALSE"
+CACHE_EXPIRE_AFTER = os.getenv("CACHE_EXPIRE_AFTER", 6) # HOURS
 
 # --- Configuration ---
 
@@ -33,6 +36,666 @@ requests_cache.install_cache('ollama_com_cache', backend='memory', expire_after=
 # Use a CachedSession for all requests to ollama.com
 cached_session = requests_cache.CachedSession()
 
+# --- ROOT HTML ---
+dummy_html_content = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama API Proxy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-third: #111927;
+            --accent-primary: #38bdf8;
+            --accent-secondary: #7dd3fc;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --gradient: linear-gradient(135deg, #38bdf8 0%, #7dd3fc 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            padding: 4rem 0;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            margin-bottom: 3rem;
+            transition: 0.7s ease-in-out;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .nav-link {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: 0.6s ease-in-out;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-secondary);
+            transition: 0.3s ease-in-out;
+            background: rgba(56, 189, 248, 0.1);
+        }
+
+        .section {
+            margin-bottom: 3rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .endpoint-grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        }
+
+        .endpoint-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: transform 0.2s ease;
+        }
+
+        .endpoint-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .endpoint-title {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .endpoint-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .code-snippet {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            position: relative;
+            margin: 1rem 0;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--bg-secondary);
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .copy-button:hover {
+            color: var(--accent-primary);
+            background: var(--bg-primary);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .social-link {
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+
+        .social-link:hover {
+            color: var(--accent-primary);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .endpoint-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent-primary);
+            margin-left: 0.5rem;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+            .apps-grid {
+        display: grid;
+        gap: 2rem;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+
+    .app-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .app-card:hover {
+        border-color: var(--accent-primary);
+    }
+
+    .app-icon {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+        margin: 0 auto 1rem;
+        border-radius: 16px;
+        filter: grayscale(1);
+        transition: filter 0.3s ease;
+    }
+
+    .app-card:hover .app-icon {
+        filter: grayscale(0);
+    }
+
+    .app-name {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .app-description {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .app-version {
+        font-size: 0.75rem;
+        color: var(--accent-primary);
+        background: rgba(56, 189, 248, 0.1);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        display: inline-block;
+    }
+
+            .apps-grid {
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: repeat(4, 1fr);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 1200px) {
+            .apps-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .apps-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .apps-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .submit-form {
+            background: var(--bg-primary);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 6px;
+            margin-top: 0.5rem;
+        }
+
+        .submit-button {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            width: 100%;
+        }
+
+        .submit-button:hover {
+            opacity: 0.9;
+        }
+
+        .status-message {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .success {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid var(--accent-primary);
+        }
+
+        .error {
+            background: rgba(248, 56, 56, 0.1);
+            border: 1px solid #f87171;
+        }
+
+            .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.95);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal-content {
+        background: var(--bg-secondary);
+        padding: 2rem;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        position: relative;
+    }
+
+    .close-modal {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+
+    .close-modal:hover {
+        color: var(--accent-primary);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    </style>
+</head>
+<body>
+    <header class="header animate-fade-in">
+        <div class="container">
+            <h1 class="title">Ollama API Proxy</h1>
+            <p class="subtitle">An API that fetches, parses, and caches data from ollama.com.</p>
+            <nav class="nav-links">
+                <a href="/docs" class="nav-link"><i class="fas fa-code"></i> API Docs</a>
+                <a href="/redoc" class="nav-link"><i class="fas fa-book-open"></i> ReDoc</a>
+                <a href="https://ollama.com" target="_blank" class="nav-link"><i class="fas fa-external-link-alt"></i> Ollama.com</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="section animate-fade-in">
+            <h2 class="section-title"><i class="fas fa-rocket"></i> Getting Started</h2>
+            <div class="code-snippet">
+                <button class="copy-button" onclick="navigator.clipboard.writeText('http://localhost:5115/docs')">
+                    <i class="far fa-copy"></i>
+                </button>
+                # Explore the API documentation
+                $ open http://localhost:5115/docs
+            </div>
+        </section>
+
+        <section class="section animate-fade-in">
+            <h2 class="section-title"><i class="fas fa-plug"></i> Example Endpoints</h2>
+            <div class="endpoint-grid">
+                <div class="endpoint-card">
+                    <div class="endpoint-title">GET /library?o=popular <span class="badge">Default</span></div>
+                    <p class="endpoint-description">Get popular models from official library</p>
+                </div>
+                
+                <div class="endpoint-card">
+                    <div class="endpoint-title">GET /jmorganca/llama3 <span class="badge">User Model</span></div>
+                    <p class="endpoint-description">Get details for specific user model</p>
+                </div>
+
+                <div class="endpoint-card">
+                    <div class="endpoint-title">GET /search?q=mistral <span class="badge">Search</span></div>
+                    <p class="endpoint-description">Global model search functionality</p>
+                </div>
+
+                <div class="endpoint-card">
+                    <div class="endpoint-title">GET /.../blobs/model <span class="badge">Blobs</span></div>
+                    <p class="endpoint-description">Access raw model artifacts</p>
+                </div>
+            </div>
+        </section>
+        
+
+        <section class="section animate-fade-in">
+            <h2 class="section-title"><i class="fas fa-microchip"></i> System Status</h2>
+            <div class="endpoint-grid">
+                <div class="endpoint-card">
+                    <div class="endpoint-title">Cache Status <span class="badge">Live</span></div>
+                    <p class="endpoint-description">6-hour intelligent caching</p>
+                </div>
+                <div class="endpoint-card">
+                    <div class="endpoint-title">Uptime <span class="badge">99.9%</span></div>
+                    <p class="endpoint-description">High availability service</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section animate-fade-in">
+            <h2 class="section-title"><i class="fas fa-rocket"></i> Powered Apps</h2>
+            <div class="apps-grid" id="apps-container"></div>
+            <button class="submit-button" id="openModal" style="margin-top: 1.5rem;">
+                <i class="fas fa-plus"></i> Submit Your App
+            </button>
+        </section>
+    </main>
+
+<div id="submitModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3 class="section-title"><i class="fas fa-plus-circle"></i> Submit Your App</h3>
+        <form id="appSubmitForm" onsubmit="return submitApp(event)">
+            <div class="form-group">
+                <label>App Name</label>
+                <input type="text" class="form-input" id="appName" required>
+            </div>
+            <div class="form-group">
+                <label>Website URL</label>
+                <input type="url" class="form-input" id="websiteUrl" required>
+            </div>
+            <button type="submit" class="submit-button">Submit Application</button>
+        </form>
+        <div id="statusMessage" class="status-message"></div>
+    </div>
+</div>
+
+    <footer class="footer animate-fade-in">
+        <div class="container">
+            <div class="social-links" style="margin-bottom: 20px;">
+                <a href="https://github.com/Houloude9IOfficial/OllamaSearchAPI" class="social-link" target="_blank">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="https://houloude9.is-a.dev" class="social-link" target="_blank">
+                    <i class="fa fa-globe"></i>
+                </a>
+            </div>
+            <span id="version" class="badge"></span>
+            <p>
+              Developed by 
+              <a href="https://discord.com/users/575254127748317194" target="_blank" rel="noopener noreferrer"
+                 style="text-decoration: none; font-weight: bold; color: inherit;"
+                 onmouseover="this.style.textDecoration='underline'" 
+                 onmouseout="this.style.textDecoration='none'">
+                Blood Shot
+              </a>
+            </p>
+            <p>
+              Maintained by 
+              <a href="https://discord.com/users/947432701160480828" target="_blank" rel="noopener noreferrer"
+                 style="text-decoration: none; font-weight: bold; color: inherit;"
+                 onmouseover="this.style.textDecoration='underline'" 
+                 onmouseout="this.style.textDecoration='none'">
+                Houloude9
+              </a>
+            </p>
+            <p>
+              Powered by 
+              <a href="https://render.com" target="_blank" rel="noopener noreferrer"
+                 style="text-decoration: none; font-weight: bold; color: inherit;"
+                 onmouseover="this.style.textDecoration='underline'" 
+                 onmouseout="this.style.textDecoration='none'">
+                Render.com
+              </a>
+            </p>
+
+        </div>
+    </footer>
+
+    <script>
+        function setversion(version) {
+            if(!String(String(version).toLowerCase()).startsWith('v')) {
+                version = `v${version}`
+            }
+            document.getElementById('version').textContent = version
+        }
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        document.querySelectorAll('.copy-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const snippet = this.parentElement.textContent.replace('Copy', '').trim();
+                navigator.clipboard.writeText(snippet);
+                
+                const originalHTML = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                
+                setTimeout(() => {
+                    this.innerHTML = originalHTML;
+                }, 2000);
+            });
+        });
+            const modal = document.getElementById('submitModal');
+    const openBtn = document.getElementById('openModal');
+    const closeSpan = document.querySelector('.close-modal');
+
+    openBtn.onclick = () => modal.style.display = 'flex';
+    closeSpan.onclick = () => modal.style.display = 'none';
+
+    window.onclick = (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    }
+        
+        async function submitApp(event) {
+            event.preventDefault();
+            const name = document.getElementById('appName').value;
+            const website = document.getElementById('websiteUrl').value;
+            const statusMessage = document.getElementById('statusMessage');
+
+            try {
+                new URL(website);
+            } catch {
+                statusMessage.textContent = "Please enter a valid URL";
+                statusMessage.className = "status-message error";
+                statusMessage.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('https://nextuiserver.htdevs.workers.dev/ollamasearchapi/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, website }),
+                });
+
+                const data = await response.json();
+                
+        if (response.ok) {
+            statusMessage.textContent = "App submitted successfully!";
+            statusMessage.className = "status-message success";
+            document.getElementById('appSubmitForm').reset();
+            setTimeout(() => {
+                modal.style.display = 'none';
+                statusMessage.style.display = 'none';
+            }, 2000);
+        } else {
+                    statusMessage.textContent = data.error || "Submission failed";
+                    statusMessage.className = "status-message error";
+                }
+            } catch (error) {
+                statusMessage.textContent = "Network error - please try again";
+                statusMessage.className = "status-message error";
+            }
+            
+            statusMessage.style.display = 'block';
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        async function loadPoweredApps() {
+            try {
+                const response = await fetch('https://nextuiserver.htdevs.workers.dev/ollamasearchapi/getapps');
+                const data = await response.json();
+                const container = document.getElementById('apps-container');
+                
+                container.innerHTML = '';
+                
+                data.apps.forEach(app => {
+                    const card = document.createElement('div');
+                    card.className = 'app-card';
+                    card.onclick = () => window.open(app.url, '_blank');
+                    const fullversion = app.version ? `<div class="app-version">${app.version}</div>` : '';
+                    
+                    card.innerHTML = `
+                        <img src="${app.icon}" class="app-icon" alt="${app.name}">
+                        <div class="app-name">${app.name}</div>
+                        <div class="app-description">${app.description}</div>
+                        ${fullversion}
+                    `;
+                    
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error loading powered apps:', error);
+            }
+        }
+
+    window.addEventListener('DOMContentLoaded', loadPoweredApps);
+
+        setversion('VERSION_BEING_REPLACED')
+    </script>
+</body>
+</html>
+"""
 
 # --- DO NOT CHANGE WITHOUT KNOWLEDGE ---
 
@@ -719,10 +1382,11 @@ async def ping(request: Request):
 
 @app.get("/", include_in_schema=False)
 async def read_index():
+    return HTMLResponse(content=dummy_html_content.replace("VERSION_BEING_REPLACED", CODE_VERSION)) # Had a lot of errors, just return html to fix everything ;)
     script_dir = os.path.dirname(__file__)
     html_file_path = os.path.join(script_dir, "static", FILETEMPTEXT)
     if not os.path.exists(html_file_path):
-        return HTMLResponse(content="<h1>Ollama Library API</h1><p>index.html not found. See <a href='/docs'>API Documentation</a>.</p>", status_code=404)
+        return HTMLResponse(content=dummy_html_content or "<h1>Ollama Library API</h1><p>index.html not found. See <a href='/docs'>API Documentation</a>.</p>", status_code=404)
     return FileResponse(path=html_file_path, media_type="text/html")
 
 
@@ -1026,665 +1690,6 @@ if __name__ == "__main__":
 
     index_html_path = os.path.join(static_dir, filename)
     if not os.path.exists(index_html_path):
-        dummy_html_content = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ollama API Proxy</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <style>
-        :root {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-third: #111927;
-            --accent-primary: #38bdf8;
-            --accent-secondary: #7dd3fc;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --border-color: #334155;
-            --gradient: linear-gradient(135deg, #38bdf8 0%, #7dd3fc 100%);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .header {
-            text-align: center;
-            padding: 4rem 0;
-            border-bottom: 1px solid var(--border-color);
-            background: var(--bg-secondary);
-            margin-bottom: 3rem;
-            transition: 0.7s ease-in-out;
-        }
-
-        .title {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 700;
-        }
-
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 1.5rem;
-            justify-content: center;
-            margin-bottom: 2rem;
-        }
-
-        .nav-link {
-            color: var(--accent-primary);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s ease;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            transition: 0.6s ease-in-out;
-        }
-
-        .nav-link:hover {
-            color: var(--accent-secondary);
-            transition: 0.3s ease-in-out;
-            background: rgba(56, 189, 248, 0.1);
-        }
-
-        .section {
-            margin-bottom: 3rem;
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .section-title {
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-            color: var(--accent-primary);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .endpoint-grid {
-            display: grid;
-            gap: 1.5rem;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        }
-
-        .endpoint-card {
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1.5rem;
-            transition: transform 0.2s ease;
-        }
-
-        .endpoint-card:hover {
-            transform: translateY(-3px);
-        }
-
-        .endpoint-title {
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--accent-primary);
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .endpoint-description {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .code-snippet {
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-            position: relative;
-            margin: 1rem 0;
-        }
-
-        .copy-button {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            background: var(--bg-secondary);
-            border: none;
-            color: var(--text-secondary);
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .copy-button:hover {
-            color: var(--accent-primary);
-            background: var(--bg-primary);
-        }
-
-        .footer {
-            text-align: center;
-            padding: 2rem 0;
-            border-top: 1px solid var(--border-color);
-            margin-top: 3rem;
-            color: var(--text-secondary);
-        }
-
-        .social-links {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-top: 1rem;
-        }
-
-        .social-link {
-            color: var(--text-secondary);
-            transition: color 0.3s ease;
-        }
-
-        .social-link:hover {
-            color: var(--accent-primary);
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-            
-            .title {
-                font-size: 2rem;
-            }
-            
-            .endpoint-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            background: rgba(56, 189, 248, 0.1);
-            color: var(--accent-primary);
-            margin-left: 0.5rem;
-        }
-
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-            .apps-grid {
-        display: grid;
-        gap: 2rem;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    }
-
-    .app-card {
-        background: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 1.5rem;
-        text-align: center;
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-
-    .app-card:hover {
-        border-color: var(--accent-primary);
-    }
-
-    .app-icon {
-        width: 80px;
-        height: 80px;
-        object-fit: contain;
-        margin: 0 auto 1rem;
-        border-radius: 16px;
-        filter: grayscale(1);
-        transition: filter 0.3s ease;
-    }
-
-    .app-card:hover .app-icon {
-        filter: grayscale(0);
-    }
-
-    .app-name {
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-
-    .app-description {
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .app-version {
-        font-size: 0.75rem;
-        color: var(--accent-primary);
-        background: rgba(56, 189, 248, 0.1);
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        display: inline-block;
-    }
-
-            .apps-grid {
-            display: grid;
-            gap: 2rem;
-            grid-template-columns: repeat(4, 1fr);
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        @media (max-width: 1200px) {
-            .apps-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .apps-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 480px) {
-            .apps-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .submit-form {
-            background: var(--bg-primary);
-            padding: 2rem;
-            border-radius: 12px;
-            margin-top: 2rem;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 0.8rem;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            border-radius: 6px;
-            margin-top: 0.5rem;
-        }
-
-        .submit-button {
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            border: none;
-            padding: 0.8rem 1.5rem;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: opacity 0.3s ease;
-            width: 100%;
-        }
-
-        .submit-button:hover {
-            opacity: 0.9;
-        }
-
-        .status-message {
-            margin-top: 1rem;
-            padding: 1rem;
-            border-radius: 6px;
-            display: none;
-        }
-
-        .success {
-            background: rgba(56, 189, 248, 0.1);
-            border: 1px solid var(--accent-primary);
-        }
-
-        .error {
-            background: rgba(248, 56, 56, 0.1);
-            border: 1px solid #f87171;
-        }
-
-            .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(15, 23, 42, 0.95);
-        z-index: 1000;
-        justify-content: center;
-        align-items: center;
-        animation: fadeIn 0.3s ease-out;
-    }
-
-    .modal-content {
-        background: var(--bg-secondary);
-        padding: 2rem;
-        border-radius: 12px;
-        width: 90%;
-        max-width: 500px;
-        position: relative;
-    }
-
-    .close-modal {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        color: var(--text-secondary);
-        font-size: 1.5rem;
-        cursor: pointer;
-        transition: color 0.3s ease;
-    }
-
-    .close-modal:hover {
-        color: var(--accent-primary);
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-    </style>
-</head>
-<body>
-    <header class="header animate-fade-in">
-        <div class="container">
-            <h1 class="title">Ollama API Proxy</h1>
-            <p class="subtitle">An API that fetches, parses, and caches data from ollama.com.</p>
-            <nav class="nav-links">
-                <a href="/docs" class="nav-link"><i class="fas fa-code"></i> API Docs</a>
-                <a href="/redoc" class="nav-link"><i class="fas fa-book-open"></i> ReDoc</a>
-                <a href="https://ollama.com" target="_blank" class="nav-link"><i class="fas fa-external-link-alt"></i> Ollama.com</a>
-            </nav>
-        </div>
-    </header>
-
-    <main class="container">
-        <section class="section animate-fade-in">
-            <h2 class="section-title"><i class="fas fa-rocket"></i> Getting Started</h2>
-            <div class="code-snippet">
-                <button class="copy-button" onclick="navigator.clipboard.writeText('http://localhost:5115/docs')">
-                    <i class="far fa-copy"></i>
-                </button>
-                # Explore the API documentation
-                $ open http://localhost:5115/docs
-            </div>
-        </section>
-
-        <section class="section animate-fade-in">
-            <h2 class="section-title"><i class="fas fa-plug"></i> Example Endpoints</h2>
-            <div class="endpoint-grid">
-                <div class="endpoint-card">
-                    <div class="endpoint-title">GET /library?o=popular <span class="badge">Default</span></div>
-                    <p class="endpoint-description">Get popular models from official library</p>
-                </div>
-                
-                <div class="endpoint-card">
-                    <div class="endpoint-title">GET /jmorganca/llama3 <span class="badge">User Model</span></div>
-                    <p class="endpoint-description">Get details for specific user model</p>
-                </div>
-
-                <div class="endpoint-card">
-                    <div class="endpoint-title">GET /search?q=mistral <span class="badge">Search</span></div>
-                    <p class="endpoint-description">Global model search functionality</p>
-                </div>
-
-                <div class="endpoint-card">
-                    <div class="endpoint-title">GET /.../blobs/model <span class="badge">Blobs</span></div>
-                    <p class="endpoint-description">Access raw model artifacts</p>
-                </div>
-            </div>
-        </section>
-        
-
-        <section class="section animate-fade-in">
-            <h2 class="section-title"><i class="fas fa-microchip"></i> System Status</h2>
-            <div class="endpoint-grid">
-                <div class="endpoint-card">
-                    <div class="endpoint-title">Cache Status <span class="badge">Live</span></div>
-                    <p class="endpoint-description">6-hour intelligent caching</p>
-                </div>
-                <div class="endpoint-card">
-                    <div class="endpoint-title">Uptime <span class="badge">99.9%</span></div>
-                    <p class="endpoint-description">High availability service</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="section animate-fade-in">
-            <h2 class="section-title"><i class="fas fa-rocket"></i> Powered Apps</h2>
-            <div class="apps-grid" id="apps-container"></div>
-            <button class="submit-button" id="openModal" style="margin-top: 1.5rem;">
-                <i class="fas fa-plus"></i> Submit Your App
-            </button>
-        </section>
-    </main>
-
-<div id="submitModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h3 class="section-title"><i class="fas fa-plus-circle"></i> Submit Your App</h3>
-        <form id="appSubmitForm" onsubmit="return submitApp(event)">
-            <div class="form-group">
-                <label>App Name</label>
-                <input type="text" class="form-input" id="appName" required>
-            </div>
-            <div class="form-group">
-                <label>Website URL</label>
-                <input type="url" class="form-input" id="websiteUrl" required>
-            </div>
-            <button type="submit" class="submit-button">Submit Application</button>
-        </form>
-        <div id="statusMessage" class="status-message"></div>
-    </div>
-</div>
-
-    <footer class="footer animate-fade-in">
-        <div class="container">
-            <div class="social-links" style="margin-bottom: 20px;">
-                <a href="https://github.com/Houloude9IOfficial/OllamaSearchAPI" class="social-link" target="_blank">
-                    <i class="fab fa-github"></i>
-                </a>
-                <a href="https://houloude9.is-a.dev" class="social-link" target="_blank">
-                    <i class="fa fa-globe"></i>
-                </a>
-            </div>
-            <span id="version" class="badge"></span>
-            <p>
-              Developed by 
-              <a href="https://discord.com/users/575254127748317194" target="_blank" rel="noopener noreferrer"
-                 style="text-decoration: none; font-weight: bold; color: inherit;"
-                 onmouseover="this.style.textDecoration='underline'" 
-                 onmouseout="this.style.textDecoration='none'">
-                Blood Shot
-              </a>
-            </p>
-            <p>
-              Maintained by 
-              <a href="https://discord.com/users/947432701160480828" target="_blank" rel="noopener noreferrer"
-                 style="text-decoration: none; font-weight: bold; color: inherit;"
-                 onmouseover="this.style.textDecoration='underline'" 
-                 onmouseout="this.style.textDecoration='none'">
-                Houloude9
-              </a>
-            </p>
-            <p>
-              Powered by 
-              <a href="https://render.com" target="_blank" rel="noopener noreferrer"
-                 style="text-decoration: none; font-weight: bold; color: inherit;"
-                 onmouseover="this.style.textDecoration='underline'" 
-                 onmouseout="this.style.textDecoration='none'">
-                Render.com
-              </a>
-            </p>
-
-        </div>
-    </footer>
-
-    <script>
-        function setversion(version) {
-            if(!String(String(version).toLowerCase()).startsWith('v')) {
-                version = `v${version}`
-            }
-            document.getElementById('version').textContent = version
-        }
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
-        });
-
-        document.querySelectorAll('.copy-button').forEach(button => {
-            button.addEventListener('click', function() {
-                const snippet = this.parentElement.textContent.replace('Copy', '').trim();
-                navigator.clipboard.writeText(snippet);
-                
-                const originalHTML = this.innerHTML;
-                this.innerHTML = '<i class="fas fa-check"></i> Copied!';
-                
-                setTimeout(() => {
-                    this.innerHTML = originalHTML;
-                }, 2000);
-            });
-        });
-            const modal = document.getElementById('submitModal');
-    const openBtn = document.getElementById('openModal');
-    const closeSpan = document.querySelector('.close-modal');
-
-    openBtn.onclick = () => modal.style.display = 'flex';
-    closeSpan.onclick = () => modal.style.display = 'none';
-
-    window.onclick = (event) => {
-        if (event.target === modal) {
-            modal.style.display = 'none';
-        }
-    }
-        
-        async function submitApp(event) {
-            event.preventDefault();
-            const name = document.getElementById('appName').value;
-            const website = document.getElementById('websiteUrl').value;
-            const statusMessage = document.getElementById('statusMessage');
-
-            try {
-                new URL(website);
-            } catch {
-                statusMessage.textContent = "Please enter a valid URL";
-                statusMessage.className = "status-message error";
-                statusMessage.style.display = 'block';
-                return;
-            }
-
-            try {
-                const response = await fetch('https://nextuiserver.htdevs.workers.dev/ollamasearchapi/submit', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ name, website }),
-                });
-
-                const data = await response.json();
-                
-        if (response.ok) {
-            statusMessage.textContent = "App submitted successfully!";
-            statusMessage.className = "status-message success";
-            document.getElementById('appSubmitForm').reset();
-            setTimeout(() => {
-                modal.style.display = 'none';
-                statusMessage.style.display = 'none';
-            }, 2000);
-        } else {
-                    statusMessage.textContent = data.error || "Submission failed";
-                    statusMessage.className = "status-message error";
-                }
-            } catch (error) {
-                statusMessage.textContent = "Network error - please try again";
-                statusMessage.className = "status-message error";
-            }
-            
-            statusMessage.style.display = 'block';
-            setTimeout(() => {
-                statusMessage.style.display = 'none';
-            }, 5000);
-        }
-
-        async function loadPoweredApps() {
-            try {
-                const response = await fetch('https://nextuiserver.htdevs.workers.dev/ollamasearchapi/getapps');
-                const data = await response.json();
-                const container = document.getElementById('apps-container');
-                
-                container.innerHTML = '';
-                
-                data.apps.forEach(app => {
-                    const card = document.createElement('div');
-                    card.className = 'app-card';
-                    card.onclick = () => window.open(app.url, '_blank');
-                    const fullversion = app.version ? `<div class="app-version">${app.version}</div>` : '';
-                    
-                    card.innerHTML = `
-                        <img src="${app.icon}" class="app-icon" alt="${app.name}">
-                        <div class="app-name">${app.name}</div>
-                        <div class="app-description">${app.description}</div>
-                        ${fullversion}
-                    `;
-                    
-                    container.appendChild(card);
-                });
-            } catch (error) {
-                console.error('Error loading powered apps:', error);
-            }
-        }
-
-    window.addEventListener('DOMContentLoaded', loadPoweredApps);
-
-        setversion('VERSION_BEING_REPLACED')
-    </script>
-</body>
-</html>
-"""
     # Replace placeholder before writing to file
         modified_html_content = dummy_html_content.replace("VERSION_BEING_REPLACED", CODE_VERSION)
         

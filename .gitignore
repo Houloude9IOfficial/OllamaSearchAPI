@@ -1,0 +1,3 @@
+static/
+http_cache.sqlite
+.env

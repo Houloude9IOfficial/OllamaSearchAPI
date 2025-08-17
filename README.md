@@ -1,55 +1,97 @@
-
 # 📚 Ollama Library API Proxy
 
-A **simple proxy API** that fetches, parses, and **caches** data from [ollama.com](https://ollama.com/).
+A **simple proxy API** that fetches, parses, and **caches** data from [ollama.com](https://ollama.com/).  
 
 🔧 **Documentation**  
-- [Swagger UI (/docs)](https://ollamasearchapi.onrender.com/docs)  
-- [ReDoc UI (/redoc)](https://ollamasearchapi.onrender.com/redoc)
+- [Swagger UI (/docs)](dear-franky-htdevssss-83f0aa7d.koyeb.app/docs)  
+- [ReDoc UI (/redoc)](dear-franky-htdevssss-83f0aa7d.koyeb.app/redoc)  
 
-🕒 **Note:** All responses are cached for **6 hours** by default.
+🕒 **Note:** All responses are cached for **6 hours** by default.  
 
 ---
+
+## Setup Instructions
+
+1. **Rename the environment file**  
+   Rename `example.env` to `.env`.
+
+2. **Configure your environment**  
+   Open the `.env` file and customize the values as needed, such as:
+   - API URL
+   - Cache duration
+   - Enable static website mode
+
+3. **Install dependencies**  
+   Run the following command to install all required Python packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Run the API**
+   ```bash 
+   ollama_library_api.py
+   ```
+   Or if you're getting errors:
+   ```bash
+   uvicorn ollama_library_api:app --host 0.0.0.0 --port 5115 --reload
+   ``` 
+
+### Example `.env`
+```env
+# CODE version of the app
+CODE_VERSION=1.3.0_Release
+
+# Base URL of Ollama
+OLLAMA_COM_BASE_URL=https://ollama.com
+
+# Your API URL
+CURRENT_BASE_URL=dear-franky-htdevssss-83f0aa7d.koyeb.app
+
+# If running a static website
+STATIC_WEBSITE=False
+
+# Cache duration in hours
+CACHE_EXPIRE_AFTER=6
+```
 
 ## 🔍 Example Endpoints
 
 ### 📊 Library Namespace
 - 🔥 Popular models:  
-  [`/library?o=popular`](https://ollamasearchapi.onrender.com/library?o=popular)
+  [`/library?o=popular`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library?o=popular)
 - 🆕 Newest models:  
-  [`/library?o=newest`](https://ollamasearchapi.onrender.com/library?o=newest)
+  [`/library?o=newest`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library?o=newest)
 - 👁️ Filter by vision capability:  
-  [`/library?c=vision`](https://ollamasearchapi.onrender.com/library?c=vision)
+  [`/library?c=vision`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library?c=vision)
 
 ---
 
 ### 👤 User-Specific Queries
 - 🔥 Popular models by `jmorganca`:  
-  [`/jmorganca?o=popular`](https://ollamasearchapi.onrender.com/jmorganca?o=popular)
+  [`/jmorganca?o=popular`](dear-franky-htdevssss-83f0aa7d.koyeb.app/jmorganca?o=popular)
 - 📄 Get details for `nextai` by `htdevs`:  
-  [`/htdevs/nextai`](https://ollamasearchapi.onrender.com/htdevs/nextai)
+  [`/htdevs/nextai`](dear-franky-htdevssss-83f0aa7d.koyeb.app/htdevs/nextai)
 
 ---
 
 ### 🔎 Search & Model Info
 - 🔍 Search for `mistral`:  
-  [`/search?q=mistral`](https://ollamasearchapi.onrender.com/search?q=mistral)
+  [`/search?q=mistral`](dear-franky-htdevssss-83f0aa7d.koyeb.app/search?q=mistral)
 - 📘 Details for `llama3`:  
-  [`/library/llama3`](https://ollamasearchapi.onrender.com/library/llama3)
+  [`/library/llama3`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3)
 - 🏷️ Tag details for `llama3:8b`:  
-  [`/library/llama3:8b`](https://ollamasearchapi.onrender.com/library/llama3:8b)
+  [`/library/llama3:8b`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b)
 - 🏷️ All tags for `llama3`:  
-  [`/library/llama3/tags`](https://ollamasearchapi.onrender.com/library/llama3/tags)
+  [`/library/llama3/tags`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3/tags)
 
 ---
 
 ### 🧱 Blobs & Digests
 - 📦 Get `model` blob for `llama3:8b`:  
-  [`/library/llama3:8b/blobs/model`](https://ollamasearchapi.onrender.com/library/llama3:8b/blobs/model)
+  [`/library/llama3:8b/blobs/model`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b/blobs/model)
 - ⚙️ Get `params` blob for `llama3:8b`:  
-  [`/library/llama3:8b/blobs/params`](https://ollamasearchapi.onrender.com/library/llama3:8b/blobs/params)
+  [`/library/llama3:8b/blobs/params`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b/blobs/params)
 - 🧬 Get blob by digest:  
-  [`/library/llama3:8b/blobs/a3de86cd1c13`](https://ollamasearchapi.onrender.com/library/llama3:8b/blobs/a3de86cd1c13)
+  [`/library/llama3:8b/blobs/a3de86cd1c13`](dear-franky-htdevssss-83f0aa7d.koyeb.app/library/llama3:8b/blobs/a3de86cd1c13)
 
 ---
 
